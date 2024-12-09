@@ -26,20 +26,26 @@
         .header {
             display: flex;
             align-items: center;
-            justify-content: center;
-            padding: 10px 0;
+            justify-content: space-between;
+            padding: 10px 20px;
         }
 
         .header img {
             width: 100px;
             height: auto;
-            margin-right: 10px;
         }
 
         .header h1 {
             margin: 0;
             font-size: 2rem;
             color: #333;
+        }
+
+        /* Kullanıcı sembolü */
+        .user-icon {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #007bff;
         }
 
         /* Arama kutusu */
@@ -66,18 +72,13 @@
 
         .book-card {
             display: flex;
+            justify-content: space-between;
             align-items: center;
             background-color: #fff;
             border: 1px solid #ddd;
             border-radius: 8px;
             padding: 15px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .book-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
         }
 
         .book-card img {
@@ -87,31 +88,38 @@
             border-radius: 5px;
         }
 
-        .book-card h3 {
-            margin: 0;
-            color: #007bff;
-        }
-
-        .book-card p {
-            color: #555;
-            font-size: 14px;
-            margin: 5px 0;
-        }
-
-        .qr-code {
-            display: block;
-            margin: 20px auto;
-            padding: 10px;
-            background-color: #007bff;
+        .book-card button {
+            background-color: red;
             color: white;
+            border: none;
+            padding: 5px 10px;
             border-radius: 5px;
-            text-align: center;
-            text-decoration: none;
-            font-weight: bold;
+            cursor: pointer;
         }
 
-        .qr-code:hover {
-            background-color: #0056b3;
+        .book-card button:hover {
+            background-color: darkred;
+        }
+
+        /* Kitap ekleme formu */
+        .add-book-form {
+            display: none;
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .add-book-form input {
+            margin: 5px;
+            padding: 5px;
+            width: 80%;
+        }
+
+        .add-book-form button {
+            padding: 5px 10px;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -119,8 +127,11 @@
 
     <!-- Sayfanın Başına Logo -->
     <div class="header">
-        <img src="mskulogo.png" alt="MSKU Logo">
-        <h1>Kitaplar Listesi</h1>
+        <div>
+            <img src="mskulogo.png" alt="MSKU Logo">
+            <h1>Kitaplar Listesi</h1>
+        </div>
+        <div class="user-icon" id="user-login">🔒</div>
     </div>
 
     <!-- Arama Kutusu -->
@@ -129,72 +140,95 @@
     </div>
 
     <div class="container">
-        <!-- Kitaplar listesi dinamik olarak buraya yüklenecek -->
+        <!-- Kitaplar listesi -->
         <div class="book-list" id="book-list"></div>
 
-        <!-- QR Kod Butonu -->
-        <a href="#" class="qr-code" id="qr-code-button">QR Kodu Göster</a>
+        <!-- Kitap Ekleme Formu -->
+        <div class="add-book-form" id="add-book-form">
+            <input type="text" id="kitapAdi" placeholder="Kitap Adı">
+            <input type="text" id="yazarAdi" placeholder="Yazar Adı">
+            <button id="add-book-btn">Kitap Ekle</button>
+        </div>
     </div>
 
     <script>
-        let allBooks = []; // Tüm kitapları saklamak için global değişken
+        let allBooks = [];
+        let isLoggedIn = false;
 
-        // books.json dosyasını fetch ile okuma
+        // JSON dosyasını yükleme
         fetch('books.json')
             .then(response => response.json())
             .then(data => {
-                allBooks = data; // Tüm kitapları kaydet
-                displayBooks(allBooks); // Kitapları ilk yükleme
-            })
-            .catch(error => {
-                console.error("JSON verisi yüklenirken hata oluştu:", error);
+                allBooks = data;
+                displayBooks(allBooks);
             });
 
-        // Kitapları listeleme fonksiyonu
+        // Kitapları göster
         function displayBooks(books) {
-            const bookListElement = document.getElementById('book-list');
-            bookListElement.innerHTML = ''; // Önce içeriği temizle
-
-            books.forEach(book => {
-                const bookCard = document.createElement('div');
-                bookCard.classList.add('book-card');
-
+            const bookList = document.getElementById("book-list");
+            bookList.innerHTML = "";
+            books.forEach((book, index) => {
+                const bookCard = document.createElement("div");
+                bookCard.classList.add("book-card");
                 bookCard.innerHTML = `
-                    <img src="mskulogo.png" alt="Kitap Logo">
                     <div>
-                        <h3>${book.kitap_adi || 'Kitap Adı Bulunamadı'}</h3>
-                        <p><strong>Yazar:</strong> ${book.yazar_adi || 'Yazar Adı Bulunamadı'}</p>
-                        <p><strong>Sicil No:</strong> ${book.sicil_no || 'Sicil No Bulunamadı'}</p>
-                        <p><strong>Tür:</strong> ${book.kitap_turu || 'Tür Bulunamadı'}</p>
+                        <img src="mskulogo.png" alt="Kitap Logo">
+                        <div>
+                            <h3>${book.kitap_adi}</h3>
+                            <p>Yazar: ${book.yazar_adi}</p>
+                        </div>
                     </div>
+                    ${isLoggedIn ? `<button onclick="deleteBook(${index})">Sil</button>` : ''}
                 `;
-
-                bookListElement.appendChild(bookCard);
+                bookList.appendChild(bookCard);
             });
         }
 
-        // Arama kutusuna olay ekleme
-        document.getElementById('search').addEventListener('input', function(event) {
-            const searchTerm = event.target.value.toLowerCase(); // Kullanıcının girdiği değeri al
+        // Arama özelliği
+        document.getElementById('search').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
             const filteredBooks = allBooks.filter(book => 
-                book.kitap_adi.toLowerCase().includes(searchTerm) || 
+                book.kitap_adi.toLowerCase().includes(searchTerm) ||
                 book.yazar_adi.toLowerCase().includes(searchTerm)
             );
-            displayBooks(filteredBooks); // Filtrelenen kitapları görüntüle
+            displayBooks(filteredBooks);
         });
 
-        // QR Kodu butonuna tıklama olayını ekleyin
-        const qrButton = document.getElementById('qr-code-button');
-        qrButton.addEventListener('click', function() {
-            const qrData = "https://www.example.com/kitaplar"; // Gerçek URL'nizi ekleyin
-            window.open(`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=200x200`, '_blank');
+        // Kullanıcı girişi
+        document.getElementById('user-login').addEventListener('click', () => {
+            const username = prompt("Kullanıcı Adı:");
+            const password = prompt("Şifre:");
+            if (username === "xxx" && password === "123") {
+                isLoggedIn = true;
+                alert("Başarıyla giriş yaptınız.");
+                document.getElementById("add-book-form").style.display = "block";
+                displayBooks(allBooks);
+            } else {
+                alert("Hatalı kullanıcı adı veya şifre.");
+            }
         });
+
+        // Kitap ekleme
+        document.getElementById('add-book-btn').addEventListener('click', () => {
+            const kitapAdi = document.getElementById('kitapAdi').value;
+            const yazarAdi = document.getElementById('yazarAdi').value;
+
+            if (kitapAdi && yazarAdi) {
+                allBooks.push({ kitap_adi: kitapAdi, yazar_adi: yazarAdi });
+                displayBooks(allBooks);
+                alert("Kitap eklendi!");
+            } else {
+                alert("Lütfen tüm alanları doldurun.");
+            }
+        });
+
+        // Kitap silme
+        function deleteBook(index) {
+            allBooks.splice(index, 1);
+            displayBooks(allBooks);
+            alert("Kitap silindi.");
+        }
     </script>
-
 </body>
 </html>
 
-    </script>
-
-</body>
-</html>
