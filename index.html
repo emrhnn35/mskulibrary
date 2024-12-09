@@ -22,9 +22,39 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
-        h1 {
-            text-align: center;
+        /* Sayfanın başına logo eklemek için stil */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 0;
+        }
+
+        .header img {
+            width: 100px;
+            height: auto;
+            margin-right: 10px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2rem;
             color: #333;
+        }
+
+        /* Arama kutusu */
+        .search-box {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .search-box input {
+            width: 50%;
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
 
         .book-list {
@@ -35,6 +65,8 @@
         }
 
         .book-card {
+            display: flex;
+            align-items: center;
             background-color: #fff;
             border: 1px solid #ddd;
             border-radius: 8px;
@@ -46,6 +78,13 @@
         .book-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .book-card img {
+            width: 50px;
+            height: auto;
+            margin-right: 15px;
+            border-radius: 5px;
         }
 
         .book-card h3 {
@@ -74,14 +113,22 @@
         .qr-code:hover {
             background-color: #0056b3;
         }
-
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <!-- Sayfanın Başına Logo -->
+    <div class="header">
+        <img src="mskulogo.png" alt="MSKU Logo">
         <h1>Kitaplar Listesi</h1>
-        
+    </div>
+
+    <!-- Arama Kutusu -->
+    <div class="search-box">
+        <input type="text" id="search" placeholder="Kitap adı veya yazar ara...">
+    </div>
+
+    <div class="container">
         <!-- Kitaplar listesi dinamik olarak buraya yüklenecek -->
         <div class="book-list" id="book-list"></div>
 
@@ -90,41 +137,63 @@
     </div>
 
     <script>
+        let allBooks = []; // Tüm kitapları saklamak için global değişken
+
         // books.json dosyasını fetch ile okuma
         fetch('books.json')
             .then(response => response.json())
             .then(data => {
-                const bookListElement = document.getElementById('book-list');
-                
-                // Kitapları listele
-                data.forEach(book => {
-                    const bookCard = document.createElement('div');
-                    bookCard.classList.add('book-card');
-                    
-                    // JSON verilerini HTML elemanlarına yerleştir
-                    bookCard.innerHTML = `
-                        <h3>${book.kitap_adi || 'Kitap Adı Bulunamadı'}</h3>
-                        <p><strong>Yazar:</strong> ${book.yazar_adi || 'Yazar Adı Bulunamadı'}</p>
-                        <p><strong>Sicil No:</strong> ${book.sicil_no || 'Sicil No Bulunamadı'}</p>
-                        <p><strong>Tür:</strong> ${book.kitap_turu || 'Tür Bulunamadı'}</p>
-                    `;
-
-                    bookListElement.appendChild(bookCard);
-                });
+                allBooks = data; // Tüm kitapları kaydet
+                displayBooks(allBooks); // Kitapları ilk yükleme
             })
             .catch(error => {
                 console.error("JSON verisi yüklenirken hata oluştu:", error);
             });
 
+        // Kitapları listeleme fonksiyonu
+        function displayBooks(books) {
+            const bookListElement = document.getElementById('book-list');
+            bookListElement.innerHTML = ''; // Önce içeriği temizle
+
+            books.forEach(book => {
+                const bookCard = document.createElement('div');
+                bookCard.classList.add('book-card');
+
+                bookCard.innerHTML = `
+                    <img src="mskulogo.png" alt="Kitap Logo">
+                    <div>
+                        <h3>${book.kitap_adi || 'Kitap Adı Bulunamadı'}</h3>
+                        <p><strong>Yazar:</strong> ${book.yazar_adi || 'Yazar Adı Bulunamadı'}</p>
+                        <p><strong>Sicil No:</strong> ${book.sicil_no || 'Sicil No Bulunamadı'}</p>
+                        <p><strong>Tür:</strong> ${book.kitap_turu || 'Tür Bulunamadı'}</p>
+                    </div>
+                `;
+
+                bookListElement.appendChild(bookCard);
+            });
+        }
+
+        // Arama kutusuna olay ekleme
+        document.getElementById('search').addEventListener('input', function(event) {
+            const searchTerm = event.target.value.toLowerCase(); // Kullanıcının girdiği değeri al
+            const filteredBooks = allBooks.filter(book => 
+                book.kitap_adi.toLowerCase().includes(searchTerm) || 
+                book.yazar_adi.toLowerCase().includes(searchTerm)
+            );
+            displayBooks(filteredBooks); // Filtrelenen kitapları görüntüle
+        });
+
         // QR Kodu butonuna tıklama olayını ekleyin
         const qrButton = document.getElementById('qr-code-button');
         qrButton.addEventListener('click', function() {
-            // QR kodu oluşturulacak URL
-            const qrData = "https://www.example.com/kitaplar"; // Buraya gerçek URL'nizi ekleyin
-
-            // QR Kodunu görüntüleme
+            const qrData = "https://www.example.com/kitaplar"; // Gerçek URL'nizi ekleyin
             window.open(`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=200x200`, '_blank');
         });
+    </script>
+
+</body>
+</html>
+
     </script>
 
 </body>
