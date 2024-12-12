@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kitaplar Listesi</title>
+    <title>Fethiye İşletme Fakültesi Kütüphanesi</title>
     <style>
         /* Genel stil */
         body {
@@ -127,11 +127,21 @@
 
     <!-- Sayfanın Başına Logo -->
     <div class="header">
-        <div>
+        <div style="text-align: center; width: 100%;">
             <img src="mskulogo.png" alt="MSKU Logo">
-            <h1>Kitaplar Listesi</h1>
+            <h1>Fethiye İşletme Fakültesi Kütüphanesi</h1>
         </div>
         <div class="user-icon" id="user-login">🔒</div>
+    </div>
+    
+
+    <!-- Kitap Ekleme Formu -->
+    <div class="add-book-form" id="add-book-form">
+        <input type="text" id="kitapAdi" placeholder="Kitap Adı">
+        <input type="text" id="yazarAdi" placeholder="Yazar Adı">
+        <input type="text" id="sicil_no" placeholder="Sicil No">
+        <input type="text" id="kitap_turu" placeholder="Kitap Türü">
+        <button id="add-book-btn">Kitap Ekle</button>
     </div>
 
     <!-- Arama Kutusu -->
@@ -142,40 +152,63 @@
     <div class="container">
         <!-- Kitaplar listesi -->
         <div class="book-list" id="book-list"></div>
-
-        <!-- Kitap Ekleme Formu -->
-        <div class="add-book-form" id="add-book-form">
-            <input type="text" id="kitapAdi" placeholder="Kitap Adı">
-            <input type="text" id="yazarAdi" placeholder="Yazar Adı">
-            <button id="add-book-btn">Kitap Ekle</button>
-        </div>
     </div>
 
     <script>
         let allBooks = [];
         let isLoggedIn = false;
 
-        // JSON dosyasını yükleme
+        // Kitaplar localStorage'dan alındı veya boş bir dizi oluşturuldu
+        if (localStorage.getItem('books')) {
+            try {
+                allBooks = JSON.parse(localStorage.getItem('books'));
+                if (!Array.isArray(allBooks)) {
+                    allBooks = []; // Eğer veri doğru değilse boş dizi ile başla
+                }
+            } catch (e) {
+                allBooks = []; // JSON.parse hatası durumunda da boş dizi ile başla
+            }
+        } else {
+            allBooks = []; // Eğer localStorage'da kitaplar yoksa, boş bir liste başlat
+        }
+
+        // books.json'dan veriyi alıp, localStorage'a eklemek
         fetch('books.json')
             .then(response => response.json())
             .then(data => {
-                allBooks = data;
+                if (allBooks.length === 0) {
+                    allBooks = data;
+                    localStorage.setItem('books', JSON.stringify(allBooks));
+                }
                 displayBooks(allBooks);
-            });
+            })
+            .catch(error => console.error('books.json dosyası yüklenemedi:', error));
 
         // Kitapları göster
         function displayBooks(books) {
             const bookList = document.getElementById("book-list");
             bookList.innerHTML = "";
+
+            if (books.length === 0) {
+                bookList.innerHTML = "<p>Henüz kitap eklenmedi.</p>";
+            }
+
             books.forEach((book, index) => {
                 const bookCard = document.createElement("div");
                 bookCard.classList.add("book-card");
+
+                // Verilerin eksik olup olmadığını kontrol et
+                const sicilNo = book.sicil_no ? book.sicil_no : "Belirtilmemiş";
+                const kitapTuru = book.kitap_turu ? book.kitap_turu : "Belirtilmemiş";
+
                 bookCard.innerHTML = `
                     <div>
                         <img src="mskulogo.png" alt="Kitap Logo">
                         <div>
                             <h3>${book.kitap_adi}</h3>
                             <p>Yazar: ${book.yazar_adi}</p>
+                            <p>Sicil No: ${sicilNo}</p>
+                            <p>Kitap Türü: ${kitapTuru}</p>
                         </div>
                     </div>
                     ${isLoggedIn ? `<button onclick="deleteBook(${index})">Sil</button>` : ''}
@@ -184,15 +217,23 @@
             });
         }
 
+
         // Arama özelliği
         document.getElementById('search').addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            const filteredBooks = allBooks.filter(book => 
-                book.kitap_adi.toLowerCase().includes(searchTerm) ||
-                book.yazar_adi.toLowerCase().includes(searchTerm)
-            );
-            displayBooks(filteredBooks);
+        const searchTerm = e.target.value.toLowerCase();
+
+        // Arama terimi kitap adı veya yazar adı ile eşleşiyorsa filtrele
+        const filteredBooks = allBooks.filter(book => {
+        const bookName = book.kitap_adi ? book.kitap_adi.toLowerCase() : '';
+        const authorName = book.yazar_adi ? book.yazar_adi.toLowerCase() : '';
+
+        return bookName.includes(searchTerm) || authorName.includes(searchTerm);
         });
+
+    // Filtrelenmiş kitapları göster
+    displayBooks(filteredBooks);
+        });
+
 
         // Kullanıcı girişi
         document.getElementById('user-login').addEventListener('click', () => {
@@ -212,9 +253,13 @@
         document.getElementById('add-book-btn').addEventListener('click', () => {
             const kitapAdi = document.getElementById('kitapAdi').value;
             const yazarAdi = document.getElementById('yazarAdi').value;
+            const sicilNo = document.getElementById('sicil_no').value;
+            const kitapTuru = document.getElementById('kitap_turu').value;
 
             if (kitapAdi && yazarAdi) {
-                allBooks.push({ kitap_adi: kitapAdi, yazar_adi: yazarAdi });
+                const newBook = { kitap_adi: kitapAdi, yazar_adi: yazarAdi, sicil_no: sicilNo, kitap_turu: kitapTuru };
+                allBooks.push(newBook);
+                localStorage.setItem('books', JSON.stringify(allBooks)); // localStorage'a kaydet
                 displayBooks(allBooks);
                 alert("Kitap eklendi!");
             } else {
@@ -225,10 +270,13 @@
         // Kitap silme
         function deleteBook(index) {
             allBooks.splice(index, 1);
+            localStorage.setItem('books', JSON.stringify(allBooks)); // localStorage'dan sil
             displayBooks(allBooks);
             alert("Kitap silindi.");
         }
+
+        // İlk yüklemede kitapları göster
+        displayBooks(allBooks);
     </script>
 </body>
 </html>
-
